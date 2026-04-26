@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Результат{% endblock %}
+
+{% block content %}
+  <h1>Результат</h1>
+
+  <section class="card">
+    <h2>{{ quiz.title }}</h2>
+    <p>Правильных ответов: <strong>{{ score }} из {{ total }}</strong></p>
+    <p>Итог: <strong>{{ percent }}%</strong></p>
+
+    <div class="actions">
+      <a class="button" href="{{ url_for('main.take_quiz', quiz_id=quiz.id) }}">Пройти ещё раз</a>
+      <a class="button secondary" href="{{ url_for('main.index') }}">К списку квизов</a>
+    </div>
+  </section>
+{% endblock %}

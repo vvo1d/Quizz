@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}{{ quiz.title }}{% endblock %}
+
+{% block content %}
+  <h1>{{ quiz.title }}</h1>
+  <p class="muted">{{ quiz.description }}</p>
+
+  <form method="post" class="form">
+    {% for question in quiz.questions %}
+      <section class="question-block">
+        <h3>{{ loop.index }}. {{ question.text }}</h3>
+
+        {% for answer in question.answers %}
+          <label class="answer-option">
+            <input
+              type="radio"
+              name="question_{{ question.id }}"
+              value="{{ answer.id }}"
+              required
+            >
+            {{ answer.text }}
+          </label>
+        {% endfor %}
+      </section>
+    {% endfor %}
+
+    <button type="submit" class="button">Завершить</button>
+  </form>
+{% endblock %}

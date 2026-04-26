@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Создать квиз{% endblock %}
+
+{% block content %}
+  <h1>Создать квиз</h1>
+
+  {% if error %}
+    <div class="alert">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" class="form">
+    <label for="title">Название</label>
+    <input id="title" type="text" name="title" placeholder="Например: Основы Python" required>
+
+    <label for="description">Описание</label>
+    <textarea id="description" name="description" placeholder="Коротко о квизе"></textarea>
+
+    <div id="questions"></div>
+
+    <div class="actions">
+      <button type="button" class="button secondary" onclick="addQuestion()">Добавить вопрос</button>
+      <button type="submit" class="button">Сохранить квиз</button>
+    </div>
+  </form>
+
+  <script>
+    let questionIndex = 0;
+
+    function addQuestion() {
+      const questionsContainer = document.getElementById('questions');
+      const index = questionIndex++;
+      const block = document.createElement('div');
+
+      block.className = 'question-block';
+      block.innerHTML = `
+        <h3>Вопрос ${index + 1}</h3>
+
+        <label>Текст вопроса</label>
+        <input type="text" name="question_text" required>
+
+        <label>Ответы</label>
+        ${[0, 1, 2, 3].map(answerIndex => `
+          <div class="answer-row">
+            <input
+              type="radio"
+              name="correct_answer_${index}"
+              value="${answerIndex}"
+              ${answerIndex === 0 ? 'checked' : ''}
+            >
+            <input
+              type="text"
+              name="answer_text_${index}"
+              placeholder="Ответ ${answerIndex + 1}"
+              required
+            >
+          </div>
+        `).join('')}
+      `;
+
+      questionsContainer.appendChild(block);
+    }
+
+    addQuestion();
+  </script>
+{% endblock %}

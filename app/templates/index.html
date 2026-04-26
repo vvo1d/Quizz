@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Квизы{% endblock %}
+
+{% block content %}
+  <h1>Квизы</h1>
+
+  {% if quizzes %}
+    {% for quiz in quizzes %}
+      <article class="card">
+        <h2>{{ quiz.title }}</h2>
+        <p class="muted">{{ quiz.description or 'Без описания' }}</p>
+        <p>Вопросов: {{ quiz.questions|length }}</p>
+        <a class="button" href="{{ url_for('main.take_quiz', quiz_id=quiz.id) }}">Пройти</a>
+      </article>
+    {% endfor %}
+  {% else %}
+    <p class="muted">Пока нет квизов. Создайте первый.</p>
+  {% endif %}
+{% endblock %}
