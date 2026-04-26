@@ -11,13 +11,19 @@
       <section class="question-block">
         <h3>{{ loop.index }}. {{ question.text }}</h3>
 
+        {% if question.is_multiple %}
+          <p class="hint">Можно выбрать несколько вариантов.</p>
+        {% else %}
+          <p class="hint">Выберите один вариант.</p>
+        {% endif %}
+
         {% for answer in question.answers %}
           <label class="answer-option">
             <input
-              type="radio"
+              type="{{ 'checkbox' if question.is_multiple else 'radio' }}"
               name="question_{{ question.id }}"
               value="{{ answer.id }}"
-              required
+              {% if not question.is_multiple %}required{% endif %}
             >
             {{ answer.text }}
           </label>

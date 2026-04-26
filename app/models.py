@@ -15,9 +15,13 @@ class Quiz(db.Model):
 
 
 class Question(db.Model):
+    TYPE_SINGLE = "single"
+    TYPE_MULTIPLE = "multiple"
+
     id = db.Column(db.Integer, primary_key=True)
     quiz_id = db.Column(db.Integer, db.ForeignKey("quiz.id"), nullable=False)
     text = db.Column(db.Text, nullable=False)
+    question_type = db.Column(db.String(20), nullable=False, default=TYPE_SINGLE)
 
     answers = db.relationship(
         "Answer",
@@ -25,6 +29,10 @@ class Question(db.Model):
         cascade="all, delete-orphan",
         lazy=True,
     )
+
+    @property
+    def is_multiple(self):
+        return self.question_type == self.TYPE_MULTIPLE
 
 
 class Answer(db.Model):

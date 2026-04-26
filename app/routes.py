@@ -5,10 +5,15 @@ from app.models import Quiz, Question, Answer
 
 main_bp = Blueprint("main", __name__)
 
+MIN_ANSWERS = 2
+MAX_ANSWERS = 10
+
+
 @main_bp.route("/")
 def index():
     quizzes = Quiz.query.order_by(Quiz.id.desc()).all()
     return render_template("index.html", quizzes=quizzes)
+
 
 @main_bp.route("/quizzes/new", methods=["GET", "POST"])
 def create_quiz():
@@ -33,22 +38,65 @@ def create_quiz():
             if not question_text:
                 continue
 
-            question = Question(quiz_id=quiz.id, text=question_text)
+            question_type = request.form.get(
+                f"question_type_{question_index}",
+                Question.TYPE_SINGLE,
+            )
+
+            if question_type not in {Question.TYPE_SINGLE, Question.TYPE_MULTIPLE}:
+                question_type = Question.TYPE_SINGLE
+
+            answer_texts = [
+                answer_text.strip()
+                for answer_text in request.form.getlist(f"answer_text_{question_index}")
+                if answer_text.strip()
+            ]
+
+            if len(answer_texts) < MIN_ANSWERS:
+                db.session.rollback()
+                return render_template(
+                    "create_quiz.html",
+                    error=f"У каждого вопроса должно быть минимум {MIN_ANSWERS} варианта ответа.",
+                )
+
+            if len(answer_texts) > MAX_ANSWERS:
+                db.session.rollback()
+                return render_template(
+                    "create_quiz.html",
+                    error=f"У вопроса не может быть больше {MAX_ANSWERS} вариантов ответа.",
+                )
+
+            correct_answer_indexes = set(
+                request.form.getlist(f"correct_answers_{question_index}")
+            )
+
+            if not correct_answer_indexes:
+                db.session.rollback()
+                return render_template(
+                    "create_quiz.html",
+                    error="У каждого вопроса должен быть хотя бы один правильный ответ.",
+                )
+
+            if question_type == Question.TYPE_SINGLE and len(correct_answer_indexes) > 1:
+                db.session.rollback()
+                return render_template(
+                    "create_quiz.html",
+                    error="В вопросе с одним правильным ответом можно выбрать только один правильный вариант.",
+                )
+
+            question = Question(
+                quiz_id=quiz.id,
+                text=question_text,
+                question_type=question_type,
+            )
             db.session.add(question)
             db.session.flush()
 
-            answer_texts = request.form.getlist(f"answer_text_{question_index}")
-            correct_answer_index = request.form.get(f"correct_answer_{question_index}")
-
             for answer_index, answer_text in enumerate(answer_texts):
-                answer_text = answer_text.strip()
-                if not answer_text:
-                    continue
-
                 answer = Answer(
                     question_id=question.id,
                     text=answer_text,
-                    is_correct=str(answer_index) == str(correct_answer_index),
+                    is_correct=str(answer_index) in correct_answer_indexes,
                 )
                 db.session.add(answer)
 
@@ -67,12 +115,17 @@ def take_quiz(quiz_id):
         score = 0
 
         for question in quiz.questions:
-            selected_answer_id = request.form.get(f"question_{question.id}")
-            if not selected_answer_id:
-                continue
+            correct_answer_ids = {
+                str(answer.id)
+                for answer in question.answers
+                if answer.is_correct
+            }
 
-            answer = Answer.query.get(int(selected_answer_id))
-            if answer and answer.question_id == question.id and answer.is_correct:
+            selected_answer_ids = set(
+                request.form.getlist(f"question_{question.id}")
+            )
+
+            if selected_answer_ids == correct_answer_ids:
                 score += 1
 
         return redirect(

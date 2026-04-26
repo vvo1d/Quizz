@@ -48,8 +48,14 @@ body {
   margin-bottom: 16px;
 }
 
-.muted {
+.muted,
+.hint {
   color: #6b7280;
+}
+
+.hint {
+  font-size: 14px;
+  margin-top: -4px;
 }
 
 .form label {
@@ -59,12 +65,15 @@ body {
 }
 
 input[type="text"],
-textarea {
+textarea,
+select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #d1d5db;
   border-radius: 10px;
   margin-bottom: 14px;
+  background: white;
+  font: inherit;
 }
 
 textarea {
@@ -88,11 +97,29 @@ textarea {
   background: #374151;
 }
 
+.button.danger {
+  background: #dc2626;
+}
+
+.button.small {
+  padding: 7px 10px;
+  font-size: 14px;
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .actions {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
   margin-top: 18px;
+}
+
+.actions.compact {
+  margin-top: 8px;
 }
 
 .question-block {
@@ -103,8 +130,20 @@ textarea {
   margin-bottom: 18px;
 }
 
-.answer-row {
+.question-header {
   display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.question-header h3 {
+  margin-top: 0;
+}
+
+.answer-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 10px;
   margin-bottom: 8px;

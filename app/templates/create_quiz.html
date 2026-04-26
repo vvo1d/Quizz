@@ -24,7 +24,9 @@
     </div>
   </form>
 
-  <script>
+ <script>
+    const MIN_ANSWERS = 2;
+    const MAX_ANSWERS = 10;
     let questionIndex = 0;
 
     function addQuestion() {
@@ -33,32 +35,140 @@
       const block = document.createElement('div');
 
       block.className = 'question-block';
+      block.dataset.questionIndex = index;
       block.innerHTML = `
-        <h3>Вопрос ${index + 1}</h3>
+        <div class="question-header">
+          <h3>Вопрос ${index + 1}</h3>
+          <button type="button" class="button danger small" onclick="removeQuestion(this)">Удалить вопрос</button>
+        </div>
 
         <label>Текст вопроса</label>
         <input type="text" name="question_text" required>
 
-        <label>Ответы</label>
-        ${[0, 1, 2, 3].map(answerIndex => `
-          <div class="answer-row">
-            <input
-              type="radio"
-              name="correct_answer_${index}"
-              value="${answerIndex}"
-              ${answerIndex === 0 ? 'checked' : ''}
-            >
-            <input
-              type="text"
-              name="answer_text_${index}"
-              placeholder="Ответ ${answerIndex + 1}"
-              required
-            >
-          </div>
-        `).join('')}
+        <label>Тип вопроса</label>
+        <select name="question_type_${index}" onchange="syncCorrectInputs(${index})">
+          <option value="single">Один правильный ответ</option>
+          <option value="multiple">Несколько правильных ответов</option>
+        </select>
+
+        <div class="answers" id="answers_${index}"></div>
+
+        <div class="actions compact">
+          <button type="button" class="button secondary small" onclick="addAnswer(${index})">Добавить ответ</button>
+        </div>
       `;
 
       questionsContainer.appendChild(block);
+      addAnswer(index);
+      addAnswer(index);
+    }
+
+    function removeQuestion(button) {
+      button.closest('.question-block').remove();
+    }
+
+    function addAnswer(questionIndex) {
+      const answersContainer = document.getElementById(`answers_${questionIndex}`);
+      const currentCount = answersContainer.children.length;
+
+      if (currentCount >= MAX_ANSWERS) {
+        alert(`Максимум ${MAX_ANSWERS} вариантов ответа.`);
+        return;
+      }
+
+      const answerIndex = currentCount;
+      const row = document.createElement('div');
+      row.className = 'answer-row';
+      row.innerHTML = buildAnswerInput(questionIndex, answerIndex, answerIndex === 0);
+      answersContainer.appendChild(row);
+      syncAnswerControls(questionIndex);
+    }
+
+    function removeAnswer(button, questionIndex) {
+      const answersContainer = document.getElementById(`answers_${questionIndex}`);
+
+      if (answersContainer.children.length <= MIN_ANSWERS) {
+        alert(`Минимум ${MIN_ANSWERS} варианта ответа.`);
+        return;
+      }
+
+      button.closest('.answer-row').remove();
+      reindexAnswers(questionIndex);
+      syncAnswerControls(questionIndex);
+    }
+
+    function buildAnswerInput(questionIndex, answerIndex, checked = false) {
+      const questionType = document.querySelector(`[name="question_type_${questionIndex}"]`)?.value || 'single';
+      const inputType = questionType === 'multiple' ? 'checkbox' : 'radio';
+
+      return `
+        <input
+          type="${inputType}"
+          name="correct_answers_${questionIndex}"
+          value="${answerIndex}"
+          ${checked ? 'checked' : ''}
+        >
+        <input
+          type="text"
+          name="answer_text_${questionIndex}"
+          placeholder="Ответ ${answerIndex + 1}"
+          required
+        >
+        <button
+          type="button"
+          class="button danger small"
+          onclick="removeAnswer(this, ${questionIndex})"
+        >
+          Удалить
+        </button>
+      `;
+    }
+
+    function syncCorrectInputs(questionIndex) {
+      const answersContainer = document.getElementById(`answers_${questionIndex}`);
+      const rows = Array.from(answersContainer.children);
+      const questionType = document.querySelector(`[name="question_type_${questionIndex}"]`).value;
+      const inputType = questionType === 'multiple' ? 'checkbox' : 'radio';
+
+      rows.forEach((row, answerIndex) => {
+        const oldInput = row.querySelector('input[type="radio"], input[type="checkbox"]');
+        const newInput = document.createElement('input');
+
+        newInput.type = inputType;
+        newInput.name = `correct_answers_${questionIndex}`;
+        newInput.value = answerIndex;
+        newInput.checked = oldInput.checked;
+
+        oldInput.replaceWith(newInput);
+      });
+
+      if (questionType === 'single') {
+        const checkedInputs = answersContainer.querySelectorAll('input[type="radio"]:checked');
+        if (checkedInputs.length > 1) {
+          checkedInputs.forEach((input, index) => input.checked = index === 0);
+        }
+      }
+    }
+
+    function reindexAnswers(questionIndex) {
+      const answersContainer = document.getElementById(`answers_${questionIndex}`);
+      const rows = Array.from(answersContainer.children);
+
+      rows.forEach((row, answerIndex) => {
+        const correctInput = row.querySelector('input[type="radio"], input[type="checkbox"]');
+        const textInput = row.querySelector('input[type="text"]');
+
+        correctInput.value = answerIndex;
+        textInput.placeholder = `Ответ ${answerIndex + 1}`;
+      });
+    }
+
+     function syncAnswerControls(questionIndex) {
+      const answersContainer = document.getElementById(`answers_${questionIndex}`);
+      const removeButtons = answersContainer.querySelectorAll('button');
+      const disableRemove = answersContainer.children.length <= MIN_ANSWERS;
+
+      removeButtons.forEach(button => button.disabled = disableRemove);
     }
 
     addQuestion();
