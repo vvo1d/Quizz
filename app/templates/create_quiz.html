@@ -9,14 +9,14 @@
     <div class="alert">{{ error }}</div>
   {% endif %}
 
-  <form method="post" class="form">
+  <form method="post" class="form" onsubmit="reindexQuestionsBeforeSubmit()">
     <label for="title">Название</label>
     <input id="title" type="text" name="title" placeholder="Например: Основы Python" required>
 
     <label for="description">Описание</label>
     <textarea id="description" name="description" placeholder="Коротко о квизе"></textarea>
 
-    <div id="questions"></div>
+    <div id="questions" class="questions-list"></div>
 
     <div class="actions">
       <button type="button" class="button secondary" onclick="addQuestion()">Добавить вопрос</button>
@@ -24,21 +24,30 @@
     </div>
   </form>
 
- <script>
+  <script>
     const MIN_ANSWERS = 2;
     const MAX_ANSWERS = 10;
     let questionIndex = 0;
+    let draggedQuestion = null;
 
     function addQuestion() {
       const questionsContainer = document.getElementById('questions');
       const index = questionIndex++;
       const block = document.createElement('div');
 
-      block.className = 'question-block';
+      block.className = 'question-block question-card';
       block.dataset.questionIndex = index;
+      block.draggable = true;
+
+      block.addEventListener('dragstart', handleDragStart);
+      block.addEventListener('dragover', handleDragOver);
+      block.addEventListener('drop', handleDrop);
+      block.addEventListener('dragend', handleDragEnd);
+
       block.innerHTML = `
         <div class="question-header">
-          <h3>Вопрос ${index + 1}</h3>
+          <div class="drag-handle" title="Перетащить вопрос">☰</div>
+          <h3 class="question-title">Вопрос ${index + 1}</h3>
           <button type="button" class="button danger small" onclick="removeQuestion(this)">Удалить вопрос</button>
         </div>
 
@@ -61,10 +70,48 @@
       questionsContainer.appendChild(block);
       addAnswer(index);
       addAnswer(index);
+      updateQuestionTitles();
     }
 
     function removeQuestion(button) {
       button.closest('.question-block').remove();
+      updateQuestionTitles();
+    }
+
+    function handleDragStart(event) {
+      draggedQuestion = this;
+      this.classList.add('dragging');
+      event.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(event) {
+      event.preventDefault();
+      const target = event.currentTarget;
+
+      if (!draggedQuestion || target === draggedQuestion) {
+        return;
+      }
+
+      const container = document.getElementById('questions');
+      const targetRect = target.getBoundingClientRect();
+      const targetMiddle = targetRect.top + targetRect.height / 2;
+
+      if (event.clientY < targetMiddle) {
+        container.insertBefore(draggedQuestion, target);
+      } else {
+        container.insertBefore(draggedQuestion, target.nextSibling);
+      }
+    }
+
+    function handleDrop(event) {
+      event.preventDefault();
+      updateQuestionTitles();
+    }
+
+    function handleDragEnd() {
+      this.classList.remove('dragging');
+      draggedQuestion = null;
+      updateQuestionTitles();
     }
 
     function addAnswer(questionIndex) {
@@ -163,12 +210,53 @@
       });
     }
 
-     function syncAnswerControls(questionIndex) {
+    function syncAnswerControls(questionIndex) {
       const answersContainer = document.getElementById(`answers_${questionIndex}`);
       const removeButtons = answersContainer.querySelectorAll('button');
       const disableRemove = answersContainer.children.length <= MIN_ANSWERS;
 
       removeButtons.forEach(button => button.disabled = disableRemove);
+    }
+
+    function updateQuestionTitles() {
+      const cards = document.querySelectorAll('.question-card');
+      cards.forEach((card, index) => {
+        card.querySelector('.question-title').textContent = `Вопрос ${index + 1}`;
+      });
+    }
+
+    function reindexQuestionsBeforeSubmit() {
+      const cards = document.querySelectorAll('.question-card');
+
+      cards.forEach((card, newQuestionIndex) => {
+        const oldQuestionIndex = card.dataset.questionIndex;
+        const typeSelect = card.querySelector(`select[name="question_type_${oldQuestionIndex}"]`);
+        const answersContainer = card.querySelector(`#answers_${oldQuestionIndex}`);
+        const addAnswerButton = card.querySelector('.actions.compact button');
+
+        card.dataset.questionIndex = newQuestionIndex;
+
+        typeSelect.name = `question_type_${newQuestionIndex}`;
+        typeSelect.setAttribute('onchange', `syncCorrectInputs(${newQuestionIndex})`);
+
+        answersContainer.id = `answers_${newQuestionIndex}`;
+        addAnswerButton.setAttribute('onclick', `addAnswer(${newQuestionIndex})`);
+
+        const rows = Array.from(answersContainer.children);
+        rows.forEach((row, answerIndex) => {
+          const correctInput = row.querySelector('input[type="radio"], input[type="checkbox"]');
+          const textInput = row.querySelector('input[type="text"]');
+          const removeButton = row.querySelector('button');
+
+          correctInput.name = `correct_answers_${newQuestionIndex}`;
+          correctInput.value = answerIndex;
+
+          textInput.name = `answer_text_${newQuestionIndex}`;
+          textInput.placeholder = `Ответ ${answerIndex + 1}`;
+
+          removeButton.setAttribute('onclick', `removeAnswer(this, ${newQuestionIndex})`);
+        });
+      });
     }
 
     addQuestion();
